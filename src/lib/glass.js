@@ -1,5 +1,6 @@
+import { advanceCoating, baseCoating } from './coating.js';
 import { paintBackdrop } from './backdrop.js';
-import { chooseForeground, contrast, luminance, contrastGuard } from './contrast.js';
+import { chooseForeground, contrast, contrastGuard } from './contrast.js';
 
 const mix=(back,front,alpha)=>back.map((c,i)=>c*(1-alpha)+front[i]*alpha);
 const clamp=(n,min,max)=>Math.max(min,Math.min(max,n));
@@ -67,18 +68,17 @@ export function createGlassRenderer(element,underlay,artboard,getSettings) {
     const r=node.getBoundingClientRect(),board=artboard.getBoundingClientRect(),scale=board.width/912;
     return {x:(r.x-board.x)/scale-shape.x,y:(r.y-board.y)/scale-shape.y,width:r.width/scale,height:r.height/scale};
   }
-  function update() {
+  function update(now) {
     frame=0;if(disposed||!backdrop)return;
     const settings=getSettings(),opacity=settings.opacity/100;
     if(blur!==settings.blur){blur=settings.blur;frost=blurPixels(backdrop,blur/4);}
     for(const shape of shapes) {
       const {node,width,height,x,y,context}=shape;
       const tint=getComputedStyle(node).getPropertyValue('--tint').split(',').map(Number);
-      // Determine coating from the current area, then keep it consistent with
-      // the pixel buffer used for contrast. Theme alone never chooses ink.
-      const background=sample(frost,x+width/2,y+height/2+underlay.scrollTop);
-      const dark=luminance(background)<(node.dataset.coating==='dark'?.22:.16);
-      const coat=dark?[24,28,32]:[255,255,255];node.dataset.coating=dark?'dark':'light';
+      const theme=settings.theme==='dark'?'dark':'light';
+      if(!shape.coating)shape.coating=advanceCoating(null,theme,[],now).state;
+      const coat=shape.coating.color,base=baseCoating(theme),edgeRatios=[];
+      node.dataset.coating=theme;
       const data=context.createImageData(width,height),visible=new Float32Array(width*height*3);
       const radius=height/2;
       const insets=[...node.querySelectorAll('.selected,.voice')].map(n=>bounds(n,shape));
@@ -88,6 +88,10 @@ export function createGlassRenderer(element,underlay,artboard,getSettings) {
         const bend=depth>=0&&depth<23?Math.sin(depth/23*Math.PI)*settings.distortion/100*23:0;
         const back=sample(backdrop,x+px,y+py+underlay.scrollTop);
         let color=sample(frost,x+px-nx*bend,y+py-ny*bend+underlay.scrollTop);
+        if(depth>3&&depth<10&&px%8===0&&py%4===0) {
+          let boundary=mix(color,base,.25);boundary=mix(boundary,tint,.33);boundary=mix(boundary,base,.15-.04*py/height);
+          edgeRatios.push(contrast(back,mix(back,boundary,opacity)));
+        }
         color=mix(color,coat,.25);color=mix(color,tint,.33);color=mix(color,coat,.15-.04*py/height);
         color=mix(color,[255,255,255],.18*Math.max(0,-ny)*Math.exp(-Math.max(0,depth)/23));
         color=mix(color,[231,255,255],lowerHighlight(depth,ny));
@@ -103,6 +107,11 @@ export function createGlassRenderer(element,underlay,artboard,getSettings) {
         for(let c=0;c<3;c++){data.data[i+c]=color[c];visible[j+c]=back[c]*(1-opacity)+color[c]*opacity;}
         data.data[i+3]=Math.round(opacity*255);
       }
+      const coating=advanceCoating(shape.coating,theme,edgeRatios,now,window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+      shape.coating=coating.state;
+      node.dataset.coatingAdjustment=shape.coating.boost?'visibility':'none';
+      node.dataset.coatingColor=shape.coating.color.map(Math.round).join(',');
+      if(coating.active)schedule();
       for(const group of groups.filter(g=>g.node.closest('.surface')===node)) {
         // Photos contains an icon and a text span: measure the actual glyph
         // area rather than its entire highlighted pill and rounded corners.
@@ -133,6 +142,9 @@ export function createGlassRenderer(element,underlay,artboard,getSettings) {
         }
         group.node.dataset.foreground=result.mode;group.node.dataset.contrast=result.ratio.toFixed(2);group.node.dataset.contrastGuard=guard.toFixed(3);
         group.node.style.setProperty('--adaptive-foreground',`rgb(${result.color.join(',')})`);
+        // Apply ink to actual glyph elements as well as the group. Auditing
+        // only a parent can miss a child's explicit color or stale inheritance.
+        for(const target of targets)target.style.color=`rgb(${result.color.join(',')})`;
       }
       context.putImageData(data,0,0);
       // Audit the quantized canvas result, rather than reporting the solver's
@@ -140,11 +152,11 @@ export function createGlassRenderer(element,underlay,artboard,getSettings) {
       // specificity or color transitions cannot silently invalidate it.
       const painted=context.getImageData(0,0,width,height).data;
       for(const group of groups.filter(g=>g.node.closest('.surface')===node)) {
-        const ink=getComputedStyle(group.node).color.match(/[\d.]+/g)?.slice(0,3).map(Number);
-        if(!ink)continue;
         const targets=group.node.matches('.selected,.voice')?[...group.node.children]:[group.node];
         let minimum=21;
         for(const target of targets) {
+          const ink=getComputedStyle(target).color.match(/[\d.]+/g)?.slice(0,3).map(Number);
+          if(!ink)continue;
           const box=bounds(target,shape);
           for(let py=Math.max(0,Math.floor(box.y+box.height*.2));py<Math.min(height,box.y+box.height*.8);py+=2)
             for(let px=Math.max(0,Math.floor(box.x));px<Math.min(width,box.x+box.width);px+=2) {

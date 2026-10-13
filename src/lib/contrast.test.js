@@ -43,3 +43,40 @@ test('fractional glyph bounds receive full protection at their first sampled pix
   assert.equal(guardCoverage(Math.floor(box.x),42,box),1);
   assert.equal(guardCoverage(box.x+box.width+9,42,box),0);
 });
+
+test('scrolling keeps the dark theme coating through ordinary light and dark regions',async()=>{
+  const {advanceCoating}=await import('./coating.js');
+  let state;
+  for(const [time,ratios] of [[0,[1.5,1.8,2]],[100,[1.09,1.6,1.8]],[1000,[1.4,1.5,1.6]]]) {
+    state=advanceCoating(state,'dark',ratios,time).state;
+    assert.deepEqual(state.color,[24,28,32]);assert.equal(state.boost,false);
+  }
+});
+test('material visibility correction requires sustained widespread loss and animates gradually',async()=>{
+  const {advanceCoating}=await import('./coating.js');
+  let state=advanceCoating(null,'dark',[1.02,1.04,1.03],0).state;
+  state=advanceCoating(state,'dark',[1.02,1.04,1.03],200).state;
+  assert.equal(state.boost,false);
+  state=advanceCoating(state,'dark',[1.02,1.04,1.03],500).state;
+  assert.equal(state.boost,true);assert.ok(state.color[0]>24&&state.color[0]<52);
+  state=advanceCoating(state,'dark',[1.2,1.2,1.2],800).state;
+  assert.equal(state.boost,true); // No threshold chatter.
+  state=advanceCoating(state,'dark',[1.5,1.5,1.5],900).state;
+  assert.equal(state.boost,true);
+  state=advanceCoating(state,'dark',[1.5,1.5,1.5],1400).state;
+  assert.equal(state.boost,false);assert.ok(state.color[0]>24);
+});
+test('brief loss of rim visibility cancels without recoloring',async()=>{
+  const {advanceCoating}=await import('./coating.js');
+  let state=advanceCoating(null,'light',[1.01,1.01],0).state;
+  state=advanceCoating(state,'light',[1.7,1.7],300).state;
+  assert.equal(state.pending,null);assert.deepEqual(state.color,[255,255,255]);
+});
+test('theme change animates even after the renderer has been idle for a long time',async()=>{
+  const {advanceCoating}=await import('./coating.js');
+  let state=advanceCoating(null,'dark',[],0).state;
+  const changed=advanceCoating(state,'light',[],60000);
+  assert.equal(changed.active,true);assert.deepEqual(changed.state.color,[24,28,32]);
+  state=advanceCoating(changed.state,'light',[],60100).state;
+  assert.ok(state.color[0]>24&&state.color[0]<255);
+});
