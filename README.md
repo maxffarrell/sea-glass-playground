@@ -11,6 +11,7 @@ npm run dev
 
 ```sh
 npm run check
+npm test
 npm run build
 npm run preview
 ```
@@ -23,7 +24,7 @@ npm run preview
 - Grain: 35% density
 - Blur: 47px frost radius (web approximation uses 23.5px Gaussian sigma)
 - Distortion: 42% refraction, with the original 23px depth
-- Roundedness: original 97px glass corner radius, 107px nested highlight radius, and Google Sans Flex `ROND=100` for glass labels
+- Roundedness: original 97px glass radius and 107px nested highlight radius, clamped to their effective 52px and 40px capsule radii, and Google Sans Flex `ROND=100` for glass labels
 
 Scrollable editorial, social, and dashboard presets pass beneath fixed glass surfaces. Uploaded images remain local to the browser. Settings persist in the URL; Reset to Figma restores the material recipe. Copy CSS includes grain and lens-filter markup.
 
@@ -32,3 +33,9 @@ The SVG-filter renderer approximates Figma frost/refraction and does not exactly
 ## Deployment
 
 The Vercel configuration builds a static Vite SPA. The GitHub repository is private; repository visibility does not itself restrict access to a hosted deployment. Vercel deployment access follows the project's configured protection.
+
+## Adaptive contrast
+
+Labels and original SVG icon silhouettes adapt independently to the content beneath them, including uploaded images. A local canvas paints computed preset backgrounds, gradients, images, and approximate text layout once when content or theme changes. Scroll frames sample this cached backdrop at each foreground element, average neighborhoods according to the frost radius, and composite the current tint, opacity, and inset coating. Relative sRGB luminance chooses source-colored dark or light foregrounds, with neutral fallbacks when needed. A 15% hysteresis band avoids polarity flicker; dark backdrop regions also receive a darker coating. Light, empty backgrounds retain the source material colors.
+
+This approximates Apple's adaptive material behavior; it is not Apple's Liquid Glass algorithm. Sampling approximates CSS gradient geometry and text wrapping, and excludes exact SVG displacement, shadows, and grain, so reported contrast estimates are not a WCAG certification. Copy CSS includes material geometry; the adaptive behavior additionally requires the `contrast.js` and `backdrop.js` modules.

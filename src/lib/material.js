@@ -1,3 +1,4 @@
+import { createAdaptiveContrast } from './contrast.js';
 export const defaults = { opacity: 100, saturation: 100, shadow: 100, grain: 35, blur: 47, distortion: 42, background: 'white', content: 'website' };
 export function createMaterialPreview(element) {
 const state={...defaults,text:'Stay curious.\nLook a little closer.',theme:'light'};
@@ -94,9 +95,22 @@ function updateContent() {
   }
   element.querySelectorAll('.refraction .scene').forEach(copy => { copy.dataset.background = state.background; copy.dataset.theme=state.theme; copy.replaceChildren(...[...scene.children].map(node => node.cloneNode(true))); copy.scrollTop=previousScroll; });
   scene.scrollTop=previousScroll;
+  adaptive.capture();
 }
 const underlay = element.querySelector('.underlay');
-const syncScroll = () => { element.querySelectorAll('.refraction .scene').forEach(copy => { copy.scrollTop = underlay.scrollTop; }); };
+// Reuse the source SVG silhouettes as masks so icons can follow the same
+// adaptive hue as the labels without altering or redrawing their paths.
+const iconWrappers=[];
+for(const img of element.querySelectorAll('.surface img')) {
+  const wrapper=document.createElement('span');
+  wrapper.className=`${img.className} adaptive-icon`;
+  wrapper.style.width=`${img.width}px`;wrapper.style.height=`${img.height}px`;
+  wrapper.style.maskImage=`url("${img.getAttribute('src')}")`;
+  wrapper.style.webkitMaskImage=wrapper.style.maskImage;
+  img.replaceWith(wrapper);wrapper.append(img);iconWrappers.push({img,wrapper,className:img.className});img.className='';
+}
+const adaptive = createAdaptiveContrast(element,underlay,artboard,()=>state);
+const syncScroll = () => { element.querySelectorAll('.refraction .scene').forEach(copy => { copy.scrollTop = underlay.scrollTop; }); adaptive.schedule(); };
 underlay.addEventListener('scroll', syncScroll, {passive:true});
 // Stable noise prevents distracting flicker while moving the sliders.
 let seed = 74321;
@@ -141,6 +155,7 @@ function update() {
   element.style.setProperty('--glow-alpha', .7 * Math.min(s, 1) * opacity);
   updateNoise();
   updateContent();
+  adaptive.schedule();
 }
 function saturateColor(channels) {
   const luminance=channels[0]*.2126+channels[1]*.7152+channels[2]*.0722;
@@ -156,6 +171,8 @@ function getCSS() {
  * 2. Inside .sea-glass, add .refraction > .lens-sample > .scene.
  * 3. Duplicate your 912x722 backdrop content into .scene.
  * 4. Use the additional CSS at the end of this recipe.
+ * Adaptive foreground colors in the playground use backdrop raster sampling.
+ * Copy src/lib/contrast.js and wire capture/schedule for that behavior; CSS alone cannot sample pixels.
  * 5. When your backdrop scrolls, synchronize its scrollTop with each .refraction .scene.
  * SVG: ${filterDefinitions.outerHTML}
  */
@@ -165,7 +182,7 @@ function getCSS() {
   --glass-opacity: ${opacity};
   position: relative;
   isolation: isolate;
-  border-radius: 97px;
+  border-radius: 52px; /* 97px Figma radius, clamped to half the 104px height */
   background: linear-gradient(rgba(255,255,255,.15), rgba(255,255,255,.11)),
     linear-gradient(rgba(var(--tint),.33), rgba(var(--tint),.33)),
     rgba(255,255,255,.25);
@@ -219,6 +236,6 @@ return {
     try { await image.decode(); if(uploadedImageURL) URL.revokeObjectURL(uploadedImageURL); uploadedImageURL=url; previousScene=''; update(); }
     catch(error) { URL.revokeObjectURL(url); throw error; }
   },
-  destroy() { observer.disconnect(); underlay.removeEventListener('scroll',syncScroll); filterDefinitions.remove(); if(uploadedImageURL) URL.revokeObjectURL(uploadedImageURL); element.querySelectorAll('.refraction').forEach(node=>node.remove()); }
+  destroy() { adaptive.destroy(); observer.disconnect(); underlay.removeEventListener('scroll',syncScroll); filterDefinitions.remove(); if(uploadedImageURL) URL.revokeObjectURL(uploadedImageURL); element.querySelectorAll('.refraction').forEach(node=>node.remove()); iconWrappers.forEach(({img,wrapper,className})=>{img.className=className;wrapper.replaceWith(img);}); }
 };
 }
