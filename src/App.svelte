@@ -70,7 +70,8 @@
     <div class="brand"><span class="brand-icon" aria-hidden="true"></span><span>Material studies <span class="slash">/</span> <strong>Sea glass</strong></span></div>
     <div class="header-tools">
       <Tabs.Root value={themeChoice} onValueChange={chooseTheme}>
-        <Tabs.List aria-label="Theme" class="theme-toggle">
+        <Tabs.List aria-label="Theme" class="theme-toggle" style={`--active-tab:${themeChoice==='light'?0:themeChoice==='dark'?1:2}`}>
+          <span class="theme-indicator" aria-hidden="true"></span>
           <Tabs.Trigger value="light" aria-label="Light theme"><Sun size={14}/><span>Light</span></Tabs.Trigger>
           <Tabs.Trigger value="dark" aria-label="Dark theme"><Moon size={14}/><span>Dark</span></Tabs.Trigger>
           <Tabs.Trigger value="device" aria-label="Device theme"><Monitor size={14}/><span>Device</span></Tabs.Trigger>

@@ -24,3 +24,10 @@ html,body{background:var(--background);color:var(--foreground)}body{font-family:
 .adaptive-icon{display:inline-block;flex-shrink:0;background:currentColor;mask-repeat:no-repeat;mask-position:center;mask-size:contain;-webkit-mask-repeat:no-repeat;-webkit-mask-position:center;-webkit-mask-size:contain}
 .adaptive-icon img{opacity:0;display:block}
 .google>.adaptive-icon{left:25px;top:23px;color:#862f2f}
+
+/* One pill slides underneath the selected theme, including Device preference. */
+.theme-toggle{position:relative;isolation:isolate;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:264px;max-width:100%;gap:0}
+.theme-indicator{position:absolute;z-index:-1;left:4px;top:4px;bottom:4px;width:calc((100% - 8px)/3);border:1px solid var(--border);border-radius:999px;background:var(--card);box-shadow:0 1px 3px #00000018;transform:translateX(calc(var(--active-tab)*100%));pointer-events:none}
+.theme-toggle [data-slot=tabs-trigger]{background:transparent!important;box-shadow:none!important;border-color:transparent!important;color:var(--muted-foreground);transition:color 160ms ease}
+.theme-toggle [data-slot=tabs-trigger][aria-selected=true]{color:var(--foreground);font-weight:600}
+@media(prefers-reduced-motion:no-preference){.theme-indicator{transition:transform 220ms cubic-bezier(.22,.8,.3,1),background-color 160ms ease}}

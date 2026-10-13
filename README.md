@@ -32,7 +32,7 @@ The SVG-filter renderer approximates Figma frost/refraction and does not exactly
 
 ## Deployment
 
-The Vercel configuration builds a static Vite SPA. The GitHub repository is private; repository visibility does not itself restrict access to a hosted deployment. Vercel deployment access follows the project's configured protection.
+The Vercel configuration builds a static Vite SPA. The GitHub repository is public. Vercel deployment access follows the project's configured protection.
 
 ## Adaptive contrast
 
