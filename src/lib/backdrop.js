@@ -53,7 +53,8 @@ export function paintBackdrop(scene) {
     const x=box.x-origin.x,y=box.y-origin.y,width=box.width,height=box.height;
     if(!width||!height)return;
     context.save();context.translate(x,y);
-    const radius=Math.min(parseFloat(style.borderTopLeftRadius)||0,width/2,height/2);
+    const corner=style.borderTopLeftRadius;
+    const radius=Math.min((parseFloat(corner)||0)*(corner.includes('%')?Math.min(width,height)/100:1),width/2,height/2);
     context.beginPath();context.roundRect(0,0,width,height,radius);context.clip();
     context.fillStyle=style.backgroundColor;context.fillRect(0,0,width,height);
     if(node===scene&&scene.dataset.background==='checker') {
@@ -61,7 +62,15 @@ export function paintBackdrop(scene) {
         context.fillStyle=(px/16+py/16)%2?scene.dataset.theme==='dark'?'#29322b':'#ecede8':scene.dataset.theme==='dark'?'#171f1a':'#fff';
         context.fillRect(px,py,16,16);
       }
-    } else splitLayers(style.backgroundImage).reverse().forEach(layer=>paintGradient(context,layer,width,height));
+    } else {
+      const size=style.backgroundSize.match(/^(\d+)px (\d+)px$/);
+      splitLayers(style.backgroundImage).reverse().forEach(layer=>{
+        if(size){const tile=document.createElement('canvas');tile.width=Number(size[1]);tile.height=Number(size[2]);paintGradient(tile.getContext('2d'),layer,tile.width,tile.height);context.fillStyle=context.createPattern(tile,'repeat');context.fillRect(0,0,width,height);}
+        else paintGradient(context,layer,width,height);
+      });
+    }
+    const border=parseFloat(style.borderTopWidth);
+    if(border){context.strokeStyle=style.borderTopColor;context.lineWidth=border;context.beginPath();context.roundRect(border/2,border/2,width-border,height-border,Math.max(0,radius-border/2));context.stroke();}
     if(node instanceof HTMLImageElement&&node.complete&&node.naturalWidth) {
       const scale=Math.max(width/node.naturalWidth,height/node.naturalHeight);
       const imageWidth=node.naturalWidth*scale,imageHeight=node.naturalHeight*scale;

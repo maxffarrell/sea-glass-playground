@@ -31,3 +31,11 @@ html,body{background:var(--background);color:var(--foreground)}body{font-family:
 .theme-toggle [data-slot=tabs-trigger]{background:transparent!important;box-shadow:none!important;border-color:transparent!important;color:var(--muted-foreground);transition:color 160ms ease}
 .theme-toggle [data-slot=tabs-trigger][aria-selected=true]{color:var(--foreground);font-weight:600}
 @media(prefers-reduced-motion:no-preference){.theme-indicator{transition:transform 220ms cubic-bezier(.22,.8,.3,1),background-color 160ms ease}}
+
+/* The same pixel buffer supplies the frosted lens, lower caustic, grain, and
+   contrast measurements. Avoid platform-dependent SVG filters on HTML. */
+.surface::before,.surface::after,.surface>.refraction{display:none}
+.surface>.glass-pixels{position:absolute;inset:0;z-index:0;width:100%;height:100%;border-radius:52px;pointer-events:none}
+.selected,.voice{background:none}
+.surface [data-foreground]{transition:none;color:var(--adaptive-foreground)}
+.google>.adaptive-icon[data-foreground]{color:var(--adaptive-foreground)}

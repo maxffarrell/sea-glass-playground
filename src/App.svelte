@@ -41,7 +41,7 @@
   async function copy() {
     if(!renderer) return;
     css=renderer.getCSS();
-    try {await navigator.clipboard.writeText(css);status='CSS copied, including grain and lens filters.';} catch {cssDialog=true;status='Copy the recipe from the dialog.';}
+    try {await navigator.clipboard.writeText(css);status='CSS approximation copied, including the lower highlight and grain.';} catch {cssDialog=true;status='Copy the recipe from the dialog.';}
   }
   onMount(()=>{
     const query=new URLSearchParams(location.search);
@@ -124,4 +124,4 @@
   </div>
   <footer class="page-footer"><span>SEA GLASS EXPLORATIONS</span><span>Move a slider. Find your finish.</span></footer>
 </main>
-<Dialog.Root bind:open={cssDialog}><Dialog.Content class="sm:max-w-xl"><Dialog.Header><Dialog.Title>Your material CSS</Dialog.Title><Dialog.Description>The recipe includes the grain texture, lens filters, and composition instructions.</Dialog.Description></Dialog.Header><Textarea readonly value={css} aria-label="Generated material CSS" class="h-80 font-mono text-xs"/></Dialog.Content></Dialog.Root>
+<Dialog.Root bind:open={cssDialog}><Dialog.Content class="sm:max-w-xl"><Dialog.Header><Dialog.Title>Your material CSS</Dialog.Title><Dialog.Description>The CSS recipe includes grain and lower highlights. Refraction and adaptive contrast also require the renderer modules.</Dialog.Description></Dialog.Header><Textarea readonly value={css} aria-label="Generated material CSS" class="h-80 font-mono text-xs"/></Dialog.Content></Dialog.Root>

@@ -26,9 +26,9 @@ npm run preview
 - Distortion: 42% refraction, with the original 23px depth
 - Roundedness: original 97px glass radius and 107px nested highlight radius, clamped to their effective 52px and 40px capsule radii, and Google Sans Flex `ROND=100` for glass labels
 
-Scrollable editorial, social, and dashboard presets pass beneath fixed glass surfaces. Uploaded images remain local to the browser. Settings persist in the URL; Reset to Figma restores the material recipe. Copy CSS includes grain and lens-filter markup.
+Scrollable editorial, social, and dashboard presets pass beneath fixed glass surfaces. Uploaded images remain local to the browser. Settings persist in the URL; Reset to Figma restores the material recipe. Copy CSS provides an approximate finish with grain and the lower highlight; the full lens and adaptive foreground require the renderer modules.
 
-The SVG-filter renderer approximates Figma frost/refraction and does not exactly reproduce its dispersion or blend-mode engine. The generic sparkle replaces the original G logo. Remaining interface icons come from the supplied Figma community file. Google Sans Flex is self-hosted under the SIL Open Font License, included at `public/fonts/OFL.txt`.
+The canvas renderer approximates Figma frost/refraction, including a bright curved lower caustic, and does not exactly reproduce its dispersion or blend-mode engine. Grain retains the source 35% density, with faint 2px speckles calibrated against the Figma render. The generic sparkle replaces the original G logo. Remaining interface icons come from the supplied Figma community file. Google Sans Flex is self-hosted under the SIL Open Font License, included at `public/fonts/OFL.txt`.
 
 ## Deployment
 
@@ -36,6 +36,8 @@ The Vercel configuration builds a static Vite SPA. The GitHub repository is publ
 
 ## Adaptive contrast
 
-Labels and original SVG icon silhouettes adapt independently to the content beneath them, including uploaded images. A local canvas paints computed preset backgrounds, gradients, images, and approximate text layout once when content or theme changes. Scroll frames sample this cached backdrop at each foreground element, average neighborhoods according to the frost radius, and composite the current tint, opacity, and inset coating. Relative sRGB luminance chooses source-colored dark or light foregrounds, with neutral fallbacks when needed. A 15% hysteresis band avoids polarity flicker; dark backdrop regions also receive a darker coating. Light, empty backgrounds retain the source material colors.
+Labels and original SVG icon silhouettes adapt independently to the content beneath them, including uploaded images. A local canvas paints computed preset backgrounds, gradients, images, and approximate text layout when content or theme changes. A software Gaussian approximation and capsule-normal displacement create the frost and refraction in `glass.js`. The same finished pixel buffer includes tint, bright lower caustics, inset highlights, opacity, and faint grain.
 
-This approximates Apple's adaptive material behavior; it is not Apple's Liquid Glass algorithm. Sampling approximates CSS gradient geometry and text wrapping, and excludes exact SVG displacement, shadows, and grain, so reported contrast estimates are not a WCAG certification. Copy CSS includes material geometry; the adaptive behavior additionally requires the `contrast.js` and `backdrop.js` modules.
+Relative sRGB luminance chooses source-colored dark or light foregrounds over the actual glyph/icon bounds. Where neither foreground clears the 4.5:1 target across mixed pixels, a feathered local material adjustment raises the sampled minimum to 4.7:1. Hysteresis never retains a failing color. After painting, the renderer audits quantized canvas pixels against the effective CSS foreground, and repeats on scroll, settings, theme, image, resize, and font load. Foreground changes are immediate, so a color transition cannot briefly pass through unreadable gray. Light, empty backgrounds retain the source material colors without contrast protection.
+
+This is a web approximation of Apple's adaptive material behavior. The backdrop painter approximates CSS gradients and text layout; the contrast audit covers the material pixel buffer, not every anti-aliased edge in the browser screenshot. Copy CSS includes the approximate finish; full refraction and adaptive contrast additionally require `glass.js`, `contrast.js`, and `backdrop.js`.
